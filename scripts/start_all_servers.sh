@@ -8,22 +8,58 @@ BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-#Flag
+# Flags
 confirm_flag=0
-log_flag=0
+interactive_flag=0
 
-# Parcourir tous les arguments
+# Array to store PIDs of started servers
+server_pids=()
+
+# Function to stop all servers using their PIDs
+stop_servers() {
+    echo -e "${BLUE}Stopping all servers...${NC}"
+    for pid in "${server_pids[@]}"; do
+        if kill -0 "$pid" 2>/dev/null; then
+            kill "$pid"
+            echo -e "${GREEN}Server with PID $pid stopped.${NC}"
+        else
+            echo -e "${YELLOW}Server with PID $pid is not running.${NC}"
+        fi
+    done
+    echo -e "${GREEN}All servers stopped.${NC}"
+}
+
+# Function to check servers
+check_servers() {
+    if [ -f "scripts/check_servers.sh" ]; then
+        bash scripts/check_servers.sh
+    else
+        echo -e "${RED}Error: scripts/check_servers.sh not found.${NC}"
+    fi
+}
+
+# Function to get server status
+status_servers() {
+    if [ -f "scripts/status_servers.sh" ]; then
+        bash scripts/status_servers.sh
+    else
+        echo -e "${RED}Error: scripts/status_servers.sh not found.${NC}"
+    fi
+}
+
+# Parse all arguments
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --confirm)
             confirm_flag=1
             shift ;;
-        --log)
-            log_flag=1
+        --interactive)
+            interactive_flag=1
+            shift ;;
+        *)
             shift ;;
     esac
 done
-
 
 echo -e "${GREEN}========== Start All Game Servers ==========${NC}"
 echo
@@ -41,7 +77,6 @@ echo -e "${GREEN}✓ Dedicated server binary found${NC}"
 
 # Find all server directories
 server_dirs=($(find . -maxdepth 1 -type d -name "server*" | sort))
-
 if [ ${#server_dirs[@]} -eq 0 ]; then
     echo -e "${RED}No server directories found. Please run create_servers.sh first.${NC}"
     exit 1
@@ -54,24 +89,22 @@ done
 echo
 
 if [[ $confirm_flag -eq 0 ]]; then
-    # Ask for confirmation
-    YELLOW='\033[1;33m'
-    NC='\033[0m' # No Color
     echo -e "${YELLOW}Do you want to start all servers?${NC}"
     read -p "Enter [y/N]: " confirm
     if [[ ! $confirm =~ ^[Yy]$ ]]; then
         echo -e "${YELLOW}Operation cancelled.${NC}"
         exit 0
     fi
+    echo -e "${BLUE}Starting all servers...${NC}"
+    echo
+else
+    echo -e "${BLUE}Starting automatically all servers because --confirm is present${NC}"
+    echo
 fi
-
-echo -e "${BLUE}Starting all servers...${NC}"
-echo
 
 # Start each server
 started_count=0
 current_dir=$(pwd)
-
 for dir in "${server_dirs[@]}"; do
     if [ -f "$dir/StarDeception.dedicated_server.sh" ]; then
         echo -e "${BLUE}Starting server in $dir...${NC}"
@@ -79,6 +112,7 @@ for dir in "${server_dirs[@]}"; do
         chmod +x StarDeception.dedicated_server.sh
         nohup ./StarDeception.dedicated_server.sh > server.log 2>&1 &
         server_pid=$!
+        server_pids+=("$server_pid") # Store the PID
         echo -e "${GREEN}  ✓ Server started with PID: $server_pid${NC}"
         ((started_count++))
         cd "$current_dir"  # Return to original directory
@@ -88,27 +122,30 @@ for dir in "${server_dirs[@]}"; do
     fi
 done
 
-echo
-if [ $started_count -gt 0 ]; then
-    echo -e "${GREEN}✓ Successfully started $started_count server(s)!${NC}"
-    echo -e "${BLUE}📋 Server management tips:${NC}"
-    echo "  • Check individual server.log files in each server directory for output"
-    echo "  • To stop all servers: pkill -f StarDeception.dedicated_server"
-    echo "  • To check running servers: ps aux | grep StarDeception"
+# Message indicating the number of servers started
+echo -e "${GREEN}${started_count} server(s) started!${NC}"
 
-    # Show logs if the option is enabled
-    if [[ $log_flag -eq 1 ]]; then
-        echo -e "${BLUE}Displaying logs for all servers...${NC}"
-        for dir in "${server_dirs[@]}"; do
-            log_file="$dir/server.log"
-            if [ -f "$log_file" ]; then
-                echo -e "${GREEN}Logs for server in $dir:${NC}"
-                # Use a separated process for all server
-                tail -f "$log_file" | awk -v dir="$dir" '{ print "\033[0;34m" dir "\033[0m | " $0 }' &
-            fi
-        done
-        wait
-    fi
-else
-    echo -e "${RED}✗ No servers were started${NC}"
+# Interactive command loop
+if [[ $interactive_flag -eq 1 ]]; then
+    while true; do
+        echo -e "\n${CYAN}Enter a command (check, status, exit to stop): ${NC}\c"
+        echo
+        read cmd
+        case $cmd in
+            exit)
+                stop_servers
+                echo -e "${BLUE}Exiting...${NC}"
+                break
+                ;;
+            check)
+                check_servers
+                ;;
+            status)
+                status_servers
+                ;;
+            *)
+                echo -e "${YELLOW}Unknown command. Use 'check', 'status', 'exit', or 'quit' to stop.${NC}"
+                ;;
+        esac
+    done
 fi
