@@ -159,3 +159,4 @@ if [ $started_count -gt 0 ]; then
     
 else
     echo -e "${RED}✗ No servers were started${NC}"
+fi
