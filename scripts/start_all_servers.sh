@@ -122,30 +122,40 @@ for dir in "${server_dirs[@]}"; do
     fi
 done
 
-# Message indicating the number of servers started
-echo -e "${GREEN}${started_count} server(s) started!${NC}"
+echo
 
-# Interactive command loop
-if [[ $interactive_flag -eq 1 ]]; then
-    while true; do
-        echo -e "\n${CYAN}Enter a command (check, status, exit to stop): ${NC}\c"
-        echo
-        read cmd
-        case $cmd in
-            exit)
-                stop_servers
-                echo -e "${BLUE}Exiting...${NC}"
-                break
-                ;;
-            check)
-                check_servers
-                ;;
-            status)
-                status_servers
-                ;;
-            *)
-                echo -e "${YELLOW}Unknown command. Use 'check', 'status', 'exit', or 'quit' to stop.${NC}"
-                ;;
-        esac
-    done
-fi
+if [ $started_count -gt 0 ]; then
+    echo -e "${GREEN}✓ Successfully started $started_count server(s)!${NC}"
+
+    # Interactive command loop
+    if [[ $interactive_flag -eq 1 ]]; then
+        while true; do
+            echo -e "\n${CYAN}Enter a command (check, status, exit to stop): ${NC}\c"
+            echo
+            read cmd
+            case $cmd in
+                exit)
+                    stop_servers
+                    echo -e "${BLUE}Exiting...${NC}"
+                    break
+                    ;;
+                check)
+                    check_servers
+                    ;;
+                status)
+                    status_servers
+                    ;;
+                *)
+                    echo -e "${YELLOW}Unknown command. Use 'check', 'status', 'exit', or 'quit' to stop.${NC}"
+                    ;;
+            esac
+        done
+    else
+        echo -e "${BLUE}📋 Server management tips:${NC}"
+        echo "  • Check individual server.log files in each server directory for output"
+        echo "  • To stop all servers: pkill -f StarDeception.dedicated_server"
+        echo "  • To check running servers: ps aux | grep StarDeception"
+    fi
+    
+else
+    echo -e "${RED}✗ No servers were started${NC}"
