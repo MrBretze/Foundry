@@ -8,6 +8,23 @@ BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
+#Flag
+confirm_flag=0
+log_flag=0
+
+# Parcourir tous les arguments
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --confirm)
+            confirm_flag=1
+            shift ;;
+        --log)
+            log_flag=1
+            shift ;;
+    esac
+done
+
+
 echo -e "${GREEN}========== Start All Game Servers ==========${NC}"
 echo
 
@@ -36,12 +53,16 @@ for dir in "${server_dirs[@]}"; do
 done
 echo
 
-# Ask for confirmation
-echo -e "${YELLOW}Do you want to start all servers?${NC}"
-read -p "Enter [y/N]: " confirm
-if [[ ! $confirm =~ ^[Yy]$ ]]; then
-    echo -e "${YELLOW}Operation cancelled.${NC}"
-    exit 0
+if [[ $confirm_flag -eq 0 ]]; then
+    # Ask for confirmation
+    YELLOW='\033[1;33m'
+    NC='\033[0m' # No Color
+    echo -e "${YELLOW}Do you want to start all servers?${NC}"
+    read -p "Enter [y/N]: " confirm
+    if [[ ! $confirm =~ ^[Yy]$ ]]; then
+        echo -e "${YELLOW}Operation cancelled.${NC}"
+        exit 0
+    fi
 fi
 
 echo -e "${BLUE}Starting all servers...${NC}"
@@ -74,6 +95,20 @@ if [ $started_count -gt 0 ]; then
     echo "  • Check individual server.log files in each server directory for output"
     echo "  • To stop all servers: pkill -f StarDeception.dedicated_server"
     echo "  • To check running servers: ps aux | grep StarDeception"
+
+    # Show logs if the option is enabled
+    if [[ $log_flag -eq 1 ]]; then
+        echo -e "${BLUE}Displaying logs for all servers...${NC}"
+        for dir in "${server_dirs[@]}"; do
+            log_file="$dir/server.log"
+            if [ -f "$log_file" ]; then
+                echo -e "${GREEN}Logs for server in $dir:${NC}"
+                # Use a separated process for all server
+                tail -f "$log_file" | awk -v dir="$dir" '{ print "\033[0;34m" dir "\033[0m | " $0 }' &
+            fi
+        done
+        wait
+    fi
 else
     echo -e "${RED}✗ No servers were started${NC}"
 fi
