@@ -76,7 +76,9 @@ check_and_download_binary() {
         if [[ ! -f "$link_file" ]]; then
             echo -e "${RED}✗ Link file not found: $link_file${NC}"
             echo "Please make sure the link file exists with a valid download URL."
-            read -p "Press Enter to continue..."
+            if [[ "$confirm_download" == false ]]; then
+                read -p "Press Enter to continue..."
+            fi
             return 1
         fi
 
@@ -132,7 +134,7 @@ check_and_download_binary() {
     echo -e "${BLUE}Downloading dedicated server binary...${NC}"
 
     # Try different download methods
-    local temp_file="/tmp/stardeception_server_download"
+    local temp_file="tmp/stardeception_server_download"
     local download_success=false
 
     # Try wget first
@@ -151,13 +153,17 @@ check_and_download_binary() {
         fi
     else
         echo -e "${RED}✗ Neither wget nor curl found. Please install one of them.${NC}"
-        read -p "Press Enter to continue..."
+        if [[ "$confirm_download" == false ]]; then
+            read -p "Press Enter to continue..."
+        fi
         return 1
     fi
 
     if [[ "$download_success" == false ]]; then
         echo -e "${RED}✗ Download failed. Please check the URL and your internet connection.${NC}"
-        read -p "Press Enter to continue..."
+        if [[ "$confirm_download" == false ]]; then
+            read -p "Press Enter to continue..."
+        fi
         return 1
     fi
 
@@ -172,7 +178,9 @@ check_and_download_binary() {
         echo "  • Try right-clicking and 'Copy link address' on the download button"
         echo
         rm -f "$temp_file"
-        read -p "Press Enter to continue..."
+        if [[ "$confirm_download" == false ]]; then
+            read -p "Press Enter to continue..."
+        fi
         return 1
     fi
 
@@ -181,13 +189,17 @@ check_and_download_binary() {
         echo -e "${YELLOW}⚠ Warning: Downloaded file doesn't appear to be an executable binary.${NC}"
         echo -e "${BLUE}File type detected:${NC} $(file "$temp_file")"
         echo
-        echo -e "${YELLOW}Do you want to continue anyway? [y/N]: ${NC}"
-        read -p "" continue_anyway
-        if [[ ! $continue_anyway =~ ^[Yy]$ ]]; then
-            rm -f "$temp_file"
-            echo -e "${YELLOW}Download cancelled.${NC}"
-            read -p "Press Enter to continue..."
-            return 1
+        if [[ "$confirm_download" == false ]]; then
+            echo -e "${YELLOW}Do you want to continue anyway? [y/N]: ${NC}"
+            read -p "" continue_anyway
+            if [[ ! $continue_anyway =~ ^[Yy]$ ]]; then
+                rm -f "$temp_file"
+                echo -e "${YELLOW}Download cancelled.${NC}"
+                read -p "Press Enter to continue..."
+                return 1
+            fi
+        else
+            echo -e "${BLUE}Automatically continuing with the non-executable file.${NC}"
         fi
     fi
 
@@ -237,7 +249,7 @@ SDO="${sdo_ip}"
 EOF
 
   # Copy the server files from src directory
-  echo -e "${BLUE}Copying server files...${NC}"
+  echo -e "${BLUE}Copying server files for server ${num}...${NC}"
 
   # Get the script directory to build absolute paths
   script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
