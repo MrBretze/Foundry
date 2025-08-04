@@ -13,6 +13,8 @@ server_num=1
 link=""
 port=7050
 confirm_download=false
+sdo_ip="127.0.0.1"
+id="01"
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -32,6 +34,14 @@ while [[ $# -gt 0 ]]; do
         ;;
         --confirm)
         confirm_download=true
+        shift
+        ;;
+        sdo_ip=*)
+        sdo_ip="${key#*=}"
+        shift
+        ;;
+        id=*)
+        id="${key#*=}"
         shift
         ;;
         *)
@@ -206,10 +216,8 @@ fi
 
 echo
 count=$server_num
-id="01" # Default ID, you can modify this as needed
-sdo_ip="127.0.0.1" # Default SDO IP, you can modify this as needed
 
-# Quick validation
+# Quick validation for id
 if ! [[ $id =~ ^[0-9]{2}$ ]]; then
   echo "Invalid identifier. It must be composed of 2 digits."
   exit 1
