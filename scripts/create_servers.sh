@@ -20,7 +20,7 @@ id="01"
 while [[ $# -gt 0 ]]; do
     key="$1"
     case $key in
-        --server_num=*)
+        server_num=*)
         server_num="${key#*=}"
         shift
         ;;
