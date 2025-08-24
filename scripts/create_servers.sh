@@ -333,6 +333,7 @@ url="${chat_url}"
 port=${chat_port}
 username="${chat_username}"
 password="${chat_password}"
+verbose_level=${verbose}
 [persistance]
 enabled=${persistence_enabled}
 DBHost="${persistence_dbhost}"
@@ -342,6 +343,7 @@ url="${metrics_url}"
 port=${metrics_port}
 username="${metrics_username}"
 password="${metrics_password}"
+verbose_level=${verbose}
 EOF
 
   # Copy ALL files from src directory to server folder
