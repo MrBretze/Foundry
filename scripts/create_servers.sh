@@ -140,165 +140,157 @@ check_and_download_zip() {
     local src_dir="./src"
     local zip_file="$src_dir/StarDeception.dedicated_server.zip"
     local link_file="$src_dir/StarDeception.dedicated_server_link.txt"
-    echo -e "${BLUE}Checking for dedicated server zip archive...${NC}"
 
-    # Check if src directory is populated
-    if [[ -d "$src_dir" && "$(ls -A "$src_dir")" ]]; then
-        echo -e "${GREEN}✓ Server files already found in src/${NC}"
-        return 0
-    fi
-
-    echo -e "${YELLOW}⚠ Server files not found in src/${NC}"
-    echo
-
-    # Use the provided link if available
-    if [[ -n "$link" ]]; then
-        download_url="$link"
-    else
-        # Check if link file exists
-        if [[ ! -f "$link_file" ]]; then
-            echo -e "${RED}✗ Link file not found: $link_file${NC}"
-            echo "Please make sure the link file exists with a valid download URL."
-            if [[ "$confirm_download" == false ]]; then
-                read -p "Press Enter to continue..."
-            fi
-            return 1
-        fi
-        # Extract download link from file
-        download_url=$(grep -E "^https?://" "$link_file" | head -1)
-    fi
-
-    if [[ -z "$download_url" || "$download_url" == *"????????????"* ]]; then
-        echo -e "${RED}✗ No valid download URL found${NC}"
-        echo
-        echo -e "${BLUE}💡 Download URL Guidelines:${NC}"
-        echo "  • The URL must be a DIRECT download link to the ZIP file"
-        echo "  • It should end with .zip (e.g., .../StarDeception.dedicated_server.zip)"
-        echo "  • Avoid URLs that redirect to web pages or download pages"
-        echo
-        echo "Please provide a valid download URL for the dedicated server ZIP archive:"
-        read -p "Enter URL: " user_url
-        if [[ -z "$user_url" ]]; then
-            echo -e "${RED}No URL provided. Cannot create servers without the archive.${NC}"
-            read -p "Press Enter to continue..."
-            return 1
-        fi
-        download_url="$user_url"
-        # Update the link file with the new URL
-        echo -e "${BLUE}Updating link file with provided URL...${NC}"
-        echo "$download_url" > "$link_file"
-    fi
-
-    echo -e "${BLUE}Found download URL: ${CYAN}$download_url${NC}"
-    echo
-
-    # Confirmation
-    if [[ "$confirm_download" == false ]]; then
-        echo -e "${YELLOW}Do you want to download the dedicated server ZIP archive now?${NC}"
-        read -p "Enter [y/N]: " confirm
-        if [[ ! $confirm =~ ^[Yy]$ ]]; then
-            echo -e "${YELLOW}Download cancelled. Cannot create servers without the archive.${NC}"
-            read -p "Press Enter to continue..."
-            return 1
-        fi
-    else
-        echo -e "${BLUE}Automatically confirmed download.${NC}"
-    fi
+    echo -e "${BLUE}Checking for dedicated server files...${NC}"
 
     # Create src directory if it doesn't exist
     mkdir -p "$src_dir"
     mkdir -p "tmp"
 
-    # Download the file
-    echo -e "${BLUE}Downloading dedicated server ZIP archive...${NC}"
-    local temp_file="tmp/stardeception_server.zip"
-    local download_success=false
+    # Check if the ZIP file already exists
+    if [[ ! -f "$zip_file" ]]; then
+        echo -e "${YELLOW}⚠ ZIP file not found.${NC}"
 
-    # Try wget first
-    if command -v wget >/dev/null 2>&1; then
-        echo -e "${BLUE}Using wget to download...${NC}"
-        if wget --no-check-certificate --content-disposition -O "$temp_file" "$download_url" 2>/dev/null; then
-            download_success=true
+        # Use the provided link if available
+        if [[ -n "$link" ]]; then
+            download_url="$link"
+        else
+            # Check if link file exists
+            if [[ ! -f "$link_file" ]]; then
+                echo -e "${RED}✗ Link file not found: $link_file${NC}"
+                echo "Please make sure the link file exists with a valid download URL."
+                if [[ "$confirm_download" == false ]]; then
+                    read -p "Press Enter to continue..."
+                fi
+                return 1
+            fi
+            # Extract download link from file
+            download_url=$(grep -E "^https?://" "$link_file" | head -1)
         fi
-    # Try curl if wget is not available
-    elif command -v curl >/dev/null 2>&1; then
-        echo -e "${BLUE}Using curl to download...${NC}"
-        if curl -L -k -H "Accept: application/octet-stream" -o "$temp_file" "$download_url" 2>/dev/null; then
-            download_success=true
-        fi
-    else
-        echo -e "${RED}✗ Neither wget nor curl found. Please install one of them.${NC}"
-        if [[ "$confirm_download" == false ]]; then
-            read -p "Press Enter to continue..."
-        fi
-        return 1
-    fi
 
-    if [[ "$download_success" == false ]]; then
-        echo -e "${RED}✗ Download failed. Please check the URL and your internet connection.${NC}"
-        if [[ "$confirm_download" == false ]]; then
-            read -p "Press Enter to continue..."
+        if [[ -z "$download_url" ]]; then
+            echo -e "${RED}✗ No valid download URL found.${NC}"
+            echo
+            echo "Please provide a valid download URL for the dedicated server ZIP archive:"
+            read -p "Enter URL: " user_url
+            if [[ -z "$user_url" ]]; then
+                echo -e "${RED}No URL provided. Cannot create servers without the archive.${NC}"
+                read -p "Press Enter to continue..."
+                return 1
+            fi
+            download_url="$user_url"
+            # Update the link file with the new URL
+            echo -e "${BLUE}Updating link file with provided URL...${NC}"
+            echo "$download_url" > "$link_file"
         fi
-        return 1
-    fi
 
-    # Check if the downloaded file is actually HTML (common issue with web hosting)
-    if file "$temp_file" | grep -q "HTML"; then
-        echo -e "${RED}✗ Downloaded file appears to be HTML instead of a ZIP archive.${NC}"
-        echo -e "${YELLOW}This usually means the URL points to a web page instead of the direct file.${NC}"
+        echo -e "${BLUE}Found download URL: ${CYAN}$download_url${NC}"
         echo
-        echo -e "${BLUE}💡 Suggestions:${NC}"
-        echo "  • Make sure the URL is a direct download link"
-        echo "  • If using a file hosting service, get the direct download URL"
-        echo "  • Try right-clicking and 'Copy link address' on the download button"
-        echo
-        rm -f "$temp_file"
-        if [[ "$confirm_download" == false ]]; then
-            read -p "Press Enter to continue..."
-        fi
-        return 1
-    fi
 
-    # Check if the file is actually a ZIP
-    if ! file "$temp_file" | grep -q "Zip archive data"; then
-        echo -e "${YELLOW}⚠ Warning: Downloaded file doesn't appear to be a ZIP archive.${NC}"
-        echo -e "${BLUE}File type detected:${NC} $(file "$temp_file")"
-        echo
+        # Confirmation
         if [[ "$confirm_download" == false ]]; then
-            echo -e "${YELLOW}Do you want to continue anyway? [y/N]: ${NC}"
-            read -p "" continue_anyway
-            if [[ ! $continue_anyway =~ ^[Yy]$ ]]; then
-                rm -f "$temp_file"
-                echo -e "${YELLOW}Download cancelled.${NC}"
+            echo -e "${YELLOW}Do you want to download the dedicated server ZIP archive now?${NC}"
+            read -p "Enter [y/N]: " confirm
+            if [[ ! $confirm =~ ^[Yy]$ ]]; then
+                echo -e "${YELLOW}Download cancelled. Cannot create servers without the archive.${NC}"
                 read -p "Press Enter to continue..."
                 return 1
             fi
         else
-            echo -e "${BLUE}Automatically continuing with the non-ZIP file.${NC}"
+            echo -e "${BLUE}Automatically confirmed download.${NC}"
         fi
+
+        # Download the file
+        echo -e "${BLUE}Downloading dedicated server ZIP archive...${NC}"
+        local temp_file="tmp/StarDeception.dedicated_server.zip"
+        local download_success=false
+
+        # Try wget first
+        if command -v wget >/dev/null 2>&1; then
+            echo -e "${BLUE}Using wget to download...${NC}"
+            if wget --no-check-certificate "$download_url" -O "$temp_file" 2>/dev/null; then
+                download_success=true
+            fi
+        # Try curl if wget is not available
+        elif command -v curl >/dev/null 2>&1; then
+            echo -e "${BLUE}Using curl to download...${NC}"
+            if curl -L -k "$download_url" -o "$temp_file" 2>/dev/null; then
+                download_success=true
+            fi
+        else
+            echo -e "${RED}✗ Neither wget nor curl found. Please install one of them.${NC}"
+            if [[ "$confirm_download" == false ]]; then
+                read -p "Press Enter to continue..."
+            fi
+            return 1
+        fi
+
+        if [[ "$download_success" == false ]]; then
+            echo -e "${RED}✗ Download failed. Please check the URL and your internet connection.${NC}"
+            if [[ "$confirm_download" == false ]]; then
+                read -p "Press Enter to continue..."
+            fi
+            return 1
+        fi
+
+        # Check if the downloaded file is actually HTML (common issue with web hosting)
+        if file "$temp_file" | grep -q "HTML"; then
+            echo -e "${RED}✗ Downloaded file appears to be HTML instead of a ZIP archive.${NC}"
+            echo -e "${YELLOW}This usually means the URL points to a web page instead of the direct file.${NC}"
+            echo
+            rm -f "$temp_file"
+            if [[ "$confirm_download" == false ]]; then
+                read -p "Press Enter to continue..."
+            fi
+            return 1
+        fi
+
+        # Check if the file is actually a ZIP
+        if ! file "$temp_file" | grep -q "Zip archive data"; then
+            echo -e "${YELLOW}⚠ Warning: Downloaded file doesn't appear to be a ZIP archive.${NC}"
+            echo -e "${BLUE}File type detected:${NC} $(file "$temp_file")"
+            echo
+            if [[ "$confirm_download" == false ]]; then
+                echo -e "${YELLOW}Do you want to continue anyway? [y/N]: ${NC}"
+                read -p "" continue_anyway
+                if [[ ! $continue_anyway =~ ^[Yy]$ ]]; then
+                    rm -f "$temp_file"
+                    echo -e "${YELLOW}Download cancelled.${NC}"
+                    read -p "Press Enter to continue..."
+                    return 1
+                fi
+            else
+                echo -e "${BLUE}Automatically continuing with the non-ZIP file.${NC}"
+            fi
+        fi
+
+        # Move the downloaded ZIP to src
+        mv "$temp_file" "$zip_file"
+        echo -e "${GREEN}✓ ZIP archive downloaded successfully${NC}"
+    else
+        echo -e "${GREEN}✓ ZIP file already exists.${NC}"
     fi
 
-    # Move the downloaded ZIP to src
-    mv "$temp_file" "$zip_file"
-    echo -e "${GREEN}✓ ZIP archive downloaded successfully${NC}"
-
-    # Extract the ZIP
-    echo -e "${BLUE}Extracting ZIP archive...${NC}"
-    if ! unzip -o "$zip_file" -d "$src_dir" >/dev/null 2>&1; then
-        echo -e "${RED}✗ Failed to extract ZIP archive.${NC}"
-        echo -e "${YELLOW}Make sure 'unzip' is installed and the file is a valid ZIP archive.${NC}"
-        if [[ "$confirm_download" == false ]]; then
-            read -p "Press Enter to continue..."
+    # Extract the ZIP if src is empty or force extraction
+    if [[ -z "$(ls -A "$src_dir")" || ! -d "${src_dir}/.extracted" ]]; then
+        echo -e "${BLUE}Extracting ZIP archive...${NC}"
+        if ! unzip -o "$zip_file" -d "$src_dir" >/dev/null 2>&1; then
+            echo -e "${RED}✗ Failed to extract ZIP archive.${NC}"
+            echo -e "${YELLOW}Make sure 'unzip' is installed and the file is a valid ZIP archive.${NC}"
+            if [[ "$confirm_download" == false ]]; then
+                read -p "Press Enter to continue..."
+            fi
+            return 1
         fi
-        return 1
+        touch "${src_dir}/.extracted"
+    else
+        echo -e "${GREEN}✓ Files already extracted.${NC}"
     fi
 
     # Make all executables in src/ executable
-    find "$src_dir" -type f -iname "*.sh" -exec chmod +x {} \;
-    find "$src_dir" -type f -iname "*x86_64" -exec chmod +x {} \;
+    find "$src_dir" -type f \( -iname "*.sh" -o -iname "*x86_64" \) -exec chmod +x {} \;
 
-    echo -e "${GREEN}✓ ZIP archive extracted and configured successfully${NC}"
-    echo -e "${GREEN}✓ All files are ready in src/${NC}"
+    echo -e "${GREEN}✓ ZIP archive ready and all files configured successfully${NC}"
     echo
     return 0
 }
