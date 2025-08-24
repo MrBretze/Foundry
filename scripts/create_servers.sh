@@ -142,13 +142,13 @@ check_and_download_zip() {
     local link_file="$src_dir/StarDeception.dedicated_server_link.txt"
     echo -e "${BLUE}Checking for dedicated server zip archive...${NC}"
 
-    # Check if required files already exist in src
-    if [[ -f "$src_dir/StarDeception.dedicated_server.x86_64" && -f "$src_dir/StarDeception.dedicated_server.sh" ]]; then
-        echo -e "${GREEN}✓ Required server files already found in src/${NC}"
+    # Check if src directory is populated
+    if [[ -d "$src_dir" && "$(ls -A "$src_dir")" ]]; then
+        echo -e "${GREEN}✓ Server files already found in src/${NC}"
         return 0
     fi
 
-    echo -e "${YELLOW}⚠ Required server files not found in src/${NC}"
+    echo -e "${YELLOW}⚠ Server files not found in src/${NC}"
     echo
 
     # Use the provided link if available
@@ -293,20 +293,12 @@ check_and_download_zip() {
         return 1
     fi
 
-    # Check if required files are present after extraction
-    if [[ ! -f "$src_dir/StarDeception.dedicated_server.x86_64" || ! -f "$src_dir/StarDeception.dedicated_server.sh" ]]; then
-        echo -e "${RED}✗ Required files not found after extraction.${NC}"
-        echo -e "${YELLOW}Expected: StarDeception.dedicated_server.x86_64 and StarDeception.dedicated_server.sh${NC}"
-        if [[ "$confirm_download" == false ]]; then
-            read -p "Press Enter to continue..."
-        fi
-        return 1
-    fi
+    # Make all executables in src/ executable
+    find "$src_dir" -type f -iname "*.sh" -exec chmod +x {} \;
+    find "$src_dir" -type f -iname "*x86_64" -exec chmod +x {} \;
 
-    # Make binary executable
-    chmod +x "$src_dir/StarDeception.dedicated_server.x86_64"
     echo -e "${GREEN}✓ ZIP archive extracted and configured successfully${NC}"
-    echo -e "${GREEN}✓ Required files found and ready${NC}"
+    echo -e "${GREEN}✓ All files are ready in src/${NC}"
     echo
     return 0
 }
@@ -360,22 +352,18 @@ username="${metrics_username}"
 password="${metrics_password}"
 EOF
 
-  # Copy the server files from src directory
-  echo -e "${BLUE}Copying server files for server ${num}...${NC}"
+  # Copy ALL files from src directory to server folder
+  echo -e "${BLUE}Copying all server files for server ${num}...${NC}"
   script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
   project_dir="$(dirname "$script_dir")"
   src_dir="$project_dir/src"
 
-  # Copy files
-  cp "$src_dir/StarDeception.dedicated_server.sh" "$folder/" || {
-    echo -e "${RED}✗ Failed to copy StarDeception.dedicated_server.sh${NC}"
+  # Copy all files and directories from src/ to server folder
+  cp -r "$src_dir"/. "$folder/" || {
+    echo -e "${RED}✗ Failed to copy files from src/ to $folder/${NC}"
     continue
   }
-  if [[ -f "$src_dir/StarDeception.dedicated_server.x86_64" ]]; then
-    cp "$src_dir/StarDeception.dedicated_server.x86_64" "$folder/" || {
-      echo -e "${YELLOW}⚠ Failed to copy binary file${NC}"
-    }
-  fi
+
   ((port++))
 done
 
