@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # Colors for better UX
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -10,11 +9,37 @@ NC='\033[0m' # No Color
 
 # Default values
 server_num=1
-link=""
-port=7050
-confirm_download=false
-sdo_ip="127.0.0.1"
 id="01"
+confirm_download=false
+link=""
+verbose=0
+
+#GamePort
+port=7050
+
+#SDO
+sdo_ip="127.0.0.1"
+sdo_url=""
+sdo_port=9001
+sdo_username=""
+sdo_password=""
+
+#Chat
+chat_url=""
+chat_port=9001
+chat_username=""
+chat_password=""
+
+#Persistance
+persistence_enabled=true
+persistence_dbhost=""
+
+#Metrics
+metrics_enabled=true
+metrics_url=""
+metrics_port=9002
+metrics_username=""
+metrics_password=""
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -24,12 +49,32 @@ while [[ $# -gt 0 ]]; do
         server_num="${key#*=}"
         shift
         ;;
+        port=*)
+        port="${key#*=}"
+        shift
+        ;;
         link=*)
         link="${key#*=}"
         shift
         ;;
-        port=*)
-        port="${key#*=}"
+        verbose=*)
+        verbose="${key#*=}"
+        shift
+        ;;
+        sdo_url=*)
+        sdo_url="${key#*=}"
+        shift
+        ;;
+        sdo_port=*)
+        sdo_port="${key#*=}"
+        shift
+        ;;
+        sdo_username=*)
+        sdo_username="${key#*=}"
+        shift
+        ;;
+        sdo_password=*)
+        sdo_password="${key#*=}"
         shift
         ;;
         --confirm)
@@ -44,6 +89,50 @@ while [[ $# -gt 0 ]]; do
         id="${key#*=}"
         shift
         ;;
+        chat_url=*)
+        chat_url="${key#*=}"
+        shift
+        ;;
+        chat_port=*)
+        chat_port="${key#*=}"
+        shift
+        ;;
+        chat_username=*)
+        chat_username="${key#*=}"
+        shift
+        ;;
+        chat_password=*)
+        chat_password="${key#*=}"
+        shift
+        ;;
+        persistence_enabled=*)
+        persistence_enabled="${key#*=}"
+        shift
+        ;;
+        persistence_dbhost=*)
+        persistence_dbhost="${key#*=}"
+        shift
+        ;;
+        metrics_enabled=*)
+        metrics_enabled="${key#*=}"
+        shift
+        ;;
+        metrics_url=*)
+        metrics_url="${key#*=}"
+        shift
+        ;;
+        metrics_port=*)
+        metrics_port="${key#*=}"
+        shift
+        ;;
+        metrics_username=*)
+        metrics_username="${key#*=}"
+        shift
+        ;;
+        metrics_password=*)
+        metrics_password="${key#*=}"
+        shift
+        ;;
         *)
         echo "Unknown option: $key"
         exit 1
@@ -56,18 +145,14 @@ check_and_download_binary() {
     local src_dir="./src"
     local binary_file="$src_dir/StarDeception.dedicated_server.x86_64"
     local link_file="$src_dir/StarDeception.dedicated_server_link.txt"
-
     echo -e "${BLUE}Checking for dedicated server binary...${NC}"
-
     # Check if binary already exists
     if [[ -f "$binary_file" ]]; then
         echo -e "${GREEN}✓ Dedicated server binary found${NC}"
         return 0
     fi
-
     echo -e "${YELLOW}⚠ Dedicated server binary not found${NC}"
     echo
-
     # Use the provided link if available
     if [[ -n "$link" ]]; then
         download_url="$link"
@@ -81,11 +166,9 @@ check_and_download_binary() {
             fi
             return 1
         fi
-
         # Extract download link from file
         download_url=$(grep -E "^https?://" "$link_file" | head -1)
     fi
-
     if [[ -z "$download_url" || "$download_url" == *"????????????"* ]]; then
         echo -e "${RED}✗ No valid download URL found${NC}"
         echo
@@ -97,23 +180,18 @@ check_and_download_binary() {
         echo
         echo "Please provide a valid download URL for the dedicated server binary:"
         read -p "Enter URL: " user_url
-
         if [[ -z "$user_url" ]]; then
             echo -e "${RED}No URL provided. Cannot create servers without binary.${NC}"
             read -p "Press Enter to continue..."
             return 1
         fi
-
         download_url="$user_url"
-
         # Update the link file with the new URL
         echo -e "${BLUE}Updating link file with provided URL...${NC}"
         echo "$download_url" > "$link_file"
     fi
-
     echo -e "${BLUE}Found download URL: ${CYAN}$download_url${NC}"
     echo
-
     # Confirmation
     if [[ "$confirm_download" == false ]]; then
         echo -e "${YELLOW}Do you want to download the dedicated server binary now?${NC}"
@@ -126,17 +204,13 @@ check_and_download_binary() {
     else
         echo -e "${BLUE}Automatically confirmed download.${NC}"
     fi
-
     # Create src directory if it doesn't exist
     mkdir -p "$src_dir"
-
     # Download the file
     echo -e "${BLUE}Downloading dedicated server binary...${NC}"
-
     # Try different download methods
     local temp_file="tmp/stardeception_server_download"
     local download_success=false
-
     # Try wget first
     if command -v wget >/dev/null 2>&1; then
         echo -e "${BLUE}Using wget to download...${NC}"
@@ -158,7 +232,6 @@ check_and_download_binary() {
         fi
         return 1
     fi
-
     if [[ "$download_success" == false ]]; then
         echo -e "${RED}✗ Download failed. Please check the URL and your internet connection.${NC}"
         if [[ "$confirm_download" == false ]]; then
@@ -166,7 +239,6 @@ check_and_download_binary() {
         fi
         return 1
     fi
-
     # Check if the downloaded file is actually HTML (common issue with web hosting)
     if file "$temp_file" | grep -q "HTML"; then
         echo -e "${RED}✗ Downloaded file appears to be HTML instead of a binary.${NC}"
@@ -183,7 +255,6 @@ check_and_download_binary() {
         fi
         return 1
     fi
-
     # Check if the file is actually executable (has the right format)
     if ! file "$temp_file" | grep -q "executable\|ELF"; then
         echo -e "${YELLOW}⚠ Warning: Downloaded file doesn't appear to be an executable binary.${NC}"
@@ -202,18 +273,14 @@ check_and_download_binary() {
             echo -e "${BLUE}Automatically continuing with the non-executable file.${NC}"
         fi
     fi
-
     # Move and rename the downloaded file
     mv "$temp_file" "$binary_file"
-
     # Make it executable
     chmod +x "$binary_file"
-
     echo -e "${GREEN}✓ Dedicated server binary downloaded and configured successfully${NC}"
     echo -e "${GREEN}✓ File saved as: $binary_file${NC}"
     echo -e "${GREEN}✓ Executable permissions set${NC}"
     echo
-
     return 0
 }
 
@@ -238,41 +305,58 @@ fi
 for ((i=1; i<=count; i++)); do
   folder="server$i"
   mkdir -p "$folder"
-
   # Server number format: 01, 02, ...
   num=$(printf "%02d" $i)
   cat > "$folder/server.ini" <<EOF
 [server]
 name="gameserver${id}${num}"
+ip_public="0.0.0.0"
 port=${port}
-SDO="${sdo_ip}"
+sdo_url="${sdo_ip}"
+sdo_port=${sdo_port}
+sdo_username="${sdo_username}"
+sdo_password="${sdo_password}"
+sdo_verbose_level=${verbose}
+
+[chat]
+url="${chat_url}"
+port=${chat_port}
+username="${chat_username}"
+password="${chat_password}"
+
+[persistance]
+enabled=${persistence_enabled}
+DBHost="${persistence_dbhost}"
+
+[metrics]
+enabled=${metrics_enabled}
+url="${metrics_url}"
+port=${metrics_port}
+username="${metrics_username}"
+password="${metrics_password}"
 EOF
+
 
   # Copy the server files from src directory
   echo -e "${BLUE}Copying server files for server ${num}...${NC}"
-
   # Get the script directory to build absolute paths
   script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
   project_dir="$(dirname "$script_dir")"
   src_dir="$project_dir/src"
-
   # Check if source files exist before copying
   if [[ ! -f "$src_dir/StarDeception.dedicated_server.sh" ]]; then
     echo -e "${RED}✗ Error: $src_dir/StarDeception.dedicated_server.sh not found${NC}"
     continue
   fi
-
   if [[ ! -f "$src_dir/StarDeception.dedicated_server.x86_64" ]]; then
     echo -e "${YELLOW}⚠ Warning: $src_dir/StarDeception.dedicated_server.x86_64 not found${NC}"
     echo -e "${YELLOW}  Server will be created but binary needs to be downloaded separately${NC}"
   fi
-
   # Copy files
   cp "$src_dir/StarDeception.dedicated_server.sh" "$folder/" || {
     echo -e "${RED}✗ Failed to copy StarDeception.dedicated_server.sh${NC}"
     continue
   }
-
   if [[ -f "$src_dir/StarDeception.dedicated_server.x86_64" ]]; then
     cp "$src_dir/StarDeception.dedicated_server.x86_64" "$folder/" || {
       echo -e "${YELLOW}⚠ Failed to copy binary file${NC}"
