@@ -362,6 +362,8 @@ EOF
     echo -e "${RED}✗ Failed to copy files from src/ to $folder/${NC}"
     continue
   }
+  
+  rm $folder/StarDeception.dedicated_server.zip
 
   ((port++))
 done
