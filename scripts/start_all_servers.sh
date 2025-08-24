@@ -110,9 +110,10 @@ for dir in "${server_dirs[@]}"; do
         echo -e "${BLUE}Starting server in $dir...${NC}"
         cd "$dir"
         chmod +x StarDeception.dedicated_server.sh
-        nohup ./StarDeception.dedicated_server.sh > server_custom.log 2>&1 &
+        nohup ./StarDeception.dedicated_server.sh > server.log 2>&1 &
         server_pid=$!
         server_pids+=("$server_pid") # Store the PID
+        chmod 666 server.log
         echo -e "${GREEN}  ✓ Server started with PID: $server_pid${NC}"
         ((started_count++))
         cd "$current_dir"  # Return to original directory
