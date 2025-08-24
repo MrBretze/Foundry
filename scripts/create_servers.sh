@@ -12,6 +12,7 @@ server_num=1
 id="01"
 confirm_download=false
 link=""
+public_ip=127.0.0.1
 verbose=0
 #GamePort
 port=7050
@@ -50,6 +51,10 @@ while [[ $# -gt 0 ]]; do
         ;;
         link=*)
         link="${key#*=}"
+        shift
+        ;;
+        public_ip=*)
+        public_ip="${key#*=}"
         shift
         ;;
         verbose=*)
