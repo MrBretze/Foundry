@@ -321,7 +321,7 @@ for ((i=1; i<=count; i++)); do
   cat > "$folder/server.ini" <<EOF
 [server]
 name="gameserver${id}${num}"
-ip_public="0.0.0.0"
+ip_public="${public_ip}"
 port=${port}
 sdo_url="${sdo_ip}"
 sdo_port=${sdo_port}
