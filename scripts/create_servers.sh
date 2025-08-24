@@ -328,7 +328,7 @@ for ((i=1; i<=count; i++)); do
 name="gameserver${id}${num}"
 ip_public="${public_ip}"
 port=${port}
-sdo_url="${sdo_ip}"
+sdo_url="${sdo_url}"
 sdo_port=${sdo_port}
 sdo_username="${sdo_username}"
 sdo_password="${sdo_password}"
