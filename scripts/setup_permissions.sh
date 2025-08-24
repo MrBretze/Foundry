@@ -42,5 +42,9 @@ echo -e "${GREEN}✓ status_servers.sh${NC}"
 chmod +x setup_permissions.sh
 echo -e "${GREEN}✓ setup_permissions.sh${NC}"
 
+# Set permissions for dedicated server script
+chmod +x ../src/StarDeception.dedicated_server.sh
+echo -e "${GREEN}✓ ../src/StarDeception.dedicated_server.sh${NC}"
+
 echo
 echo -e "${BLUE}All shell scripts now have executable permissions!${NC}"
